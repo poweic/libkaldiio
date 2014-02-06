@@ -9,11 +9,11 @@ int main (int argc, char* argv[]) {
   CmdParser cmd(argc, argv);
   cmd.addGroup("Input / Output:")
      .add("--ark", "filename of input feature archive (in Kaldi format)")
-     .add("--label", "filename of input label")
+     .add("--label", "filename of input label", false)
      .add("--svm", "filename of output (in LibSVM format)", false);
 
   cmd.addGroup("Options:")
-     .add("-i", "ignore missing labels (set those to 0)", "true");
+     .add("-i", "ignore missing labels (set those to 0)", "false");
 
   cmd.addGroup("Example: ./kaldi-to-svm --ark data/example.39.ark -svm example.dat");
 
@@ -36,18 +36,21 @@ int main (int argc, char* argv[]) {
     size_t length = (offset[i+1] - offset[i]) / dim;
     for (size_t j=0; j<length; ++j) {
 
-      if (labels.count(docids[i]) == 0) {
+      int y = 0;
+
+      if (labels.count(docids[i]) > 0)
+	y = labels[docids[i]][j];
+      else {
 	if (ignore)
 	  continue;
-	else
-	  fprintf(fid, "0 ");
       }
-      
-      fprintf(fid, "%d ", labels[docids[i]][j]);
+
+      fprintf(fid, "%d ", y);
+
       for (size_t k=0; k<dim; ++k) {
 	float x = data[offset[i] + j*dim + k];
 	if (x != 0)
-	  fprintf(fid, "%lu:%g ", k, x);
+	  fprintf(fid, "%lu:%g ", k + 1, x);
       }
       fprintf(fid, "\n");
     }
@@ -62,6 +65,9 @@ int main (int argc, char* argv[]) {
 map<string, vector<int> > readLabels(const string& filename) {
 
   map<string, vector<int> > labels;
+
+  if (filename.empty())
+    return labels;
 
   ifstream fin(filename.c_str());
 
