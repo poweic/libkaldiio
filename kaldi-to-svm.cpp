@@ -1,5 +1,6 @@
 #include <cmdparser.h>
 #include <fstream>
+#include <cstdio>
 #include <kaldi-io.h>
 
 map<string, vector<int> > readLabels(const string& filename);
@@ -18,6 +19,7 @@ int main (int argc, char* argv[]) {
 
   if(!cmd.isOptionLegal())
     cmd.showUsageAndExit();
+
 
   string input_fn = cmd[1];
   string label_fn = cmd[2];

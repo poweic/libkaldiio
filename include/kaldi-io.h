@@ -18,8 +18,12 @@ public:
   KaldiArchive();
   KaldiArchive(string filename);
 
+  bool is_binary(istream& is);
+
   void read(istream& is);
   void read(string filename);
+  void readBinary(istream& is);
+  void readText(istream& is);
 
   void write(ostream& os);
   void write(string filename);
