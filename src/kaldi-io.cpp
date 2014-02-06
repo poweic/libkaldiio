@@ -1,66 +1,90 @@
 #include <kaldi-io.h>
-
-vector<string> readKaldi(string filename, float* &dataPtr, size_t* &offsetPtr, size_t& N, size_t& dim) {
-
-  vector<string> docid;
-
-  FILE* f = fopen(filename.c_str(), "r");
   
-  if (f == NULL)
-    return docid;
+KaldiArchive::KaldiArchive(): _dim(0) {
+}
 
-  size_t line_buffer = 65536;
-  char line[line_buffer];
+KaldiArchive::KaldiArchive(string filename): _dim(0) {
+  this->read(filename);
+}
 
-#pragma GCC diagnostic ignored "-Wunused-result"
-  fgets(line, line_buffer, f);
-  fgets(line, line_buffer, f);
+size_t KaldiArchive::getFeatureDimension(istream& is) {
 
-  dim = 0;
-  char* tok = strtok(line, " ");
-  do { ++dim; } while (strtok(NULL, " ")[0] != '\n');
+  size_t pos = is.tellg();
+  
+  string line;
+  getline(is, line);
+  getline(is, line);
+  line = trim(line);
 
-  fseek(f, 0, SEEK_SET);
+  is.seekg(-pos, is.cur);
 
-  vector<float> data;
-  vector<size_t> offset;
+  return split(line, ' ').size();
+}
 
-  while(fgets(line, line_buffer, f)) {
+void KaldiArchive::read(istream& is) {
 
-    if (string(line).find("[") != string::npos) {
-      docid.push_back(strtok(line, " "));
-      offset.push_back(data.size());
+  _dim = 0;
+  _data.clear();
+  _offset.clear();
+  _docid.clear();
+
+  string line;
+
+  while (getline(is, line)) {
+    if (line.find("[") != string::npos) {
+      _docid.push_back(split(trim(line), ' ')[0]);
+      _offset.push_back(_data.size());
       continue;
     }
 
-    tok = strtok(line, " ");
-    data.push_back(atof(tok));
-    while((tok = strtok(NULL, " "))) {
-      if (tok[0] == ']' || tok[0] == '\n')
-	break;
-      data.push_back(atof(tok));
-    }
+    if (line.find("]") != string::npos)
+      line.resize(line.find("]"));
+
+    float x;
+    stringstream ss(line);
+
+    if (_dim == 0)
+      _dim = split(trim(line), ' ').size();
+
+    while (ss >> x)
+      _data.push_back(x);
   }
-  offset.push_back(data.size());
-
-  dataPtr = new float[data.size()];
-  memcpy(dataPtr, data.data(), sizeof(float) * data.size());
-
-  offsetPtr = new size_t[offset.size()];
-  memcpy(offsetPtr, offset.data(), sizeof(size_t) * offset.size());
-
-  N = offset.size() - 1;
-
-  fclose(f);
-
-  return docid;
+  _offset.push_back(_data.size());
 }
 
-void print(FILE* fid, float* m, int N) {
-  for (int i=0; i<N; ++i) {
-    for (int j=0; j<N; ++j)
-      fprintf(fid, "%.6f ", m[i * N + j]);
-    fprintf(fid, "\n");
+void KaldiArchive::read(string filename) {
+  if (filename == "-")
+    this->read(cin);
+  else {
+    ifstream fin(filename.c_str());
+    this->read(fin);
+    fin.close();
+  }
+}
+
+void KaldiArchive::write(string filename) {
+
+  if (filename == "-")
+    this->write(cout);
+  else {
+    ofstream fout(filename.c_str());
+    this->write(fout);
+    fout.close();
+  }
+}
+
+void KaldiArchive::write(ostream& os) {
+  for (size_t i=0; i<_docid.size(); ++i) {
+    os << _docid[i] << " [";
+
+    size_t t = (_offset[i+1] - _offset[i]) / _dim;
+
+    for (size_t j=0; j<t; ++j) {
+      os << "\n  ";
+      for (size_t k=0; k<_dim; ++k)
+	os << _data[_offset[i] + j*_dim + k] << " ";
+    }
+    os << "]\n";
   }
 }
 
