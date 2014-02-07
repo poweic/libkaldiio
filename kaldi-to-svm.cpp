@@ -4,6 +4,8 @@
 #include <kaldi-io.h>
 
 map<string, vector<int> > readLabels(const string& filename);
+void saveAsLibSvmFormat(const string& filename, const KaldiArchive& ark, const map<string, vector<int> >& labels, bool skip);
+void saveDocumentFrameCountMapping(const string& filename, const KaldiArchive& ark);
 
 int main (int argc, char* argv[]) {
 
@@ -14,23 +16,45 @@ int main (int argc, char* argv[]) {
      .add("mapping-out", false);
 
   cmd.addGroup("Options:")
-     .add("-i", "ignore missing labels (set those to 0)", "false");
+     .add("--skip", "Skip over missing labels (--skip=true )\n"
+		    "Print 0 as label         (--skip=false)", "false");
 
   cmd.addGroup("Example: ./kaldi-to-svm data/example.39.ark example.labels");
 
   if(!cmd.isOptionLegal())
     cmd.showUsageAndExit();
 
-
   string input_fn   = cmd[1];
   string label_fn   = cmd[2];
   string output_fn  = cmd[3];
   string mapping_fn = cmd[4];
-  bool ignore	  = cmd["-i"];
+  bool skip	    = cmd["--skip"];
 
   map<string, vector<int> > labels = readLabels(label_fn);
 
   KaldiArchive ark(input_fn);
+
+  saveAsLibSvmFormat(output_fn, ark, labels, skip);
+  saveDocumentFrameCountMapping(mapping_fn, ark);
+
+  return 0;
+}
+
+void saveDocumentFrameCountMapping(const string& filename, const KaldiArchive& ark) {
+
+  const vector<string>& docids = ark.docid();
+  const vector<size_t>& offset = ark.offset();
+
+  if (filename.empty())
+    return;
+
+  ofstream fout(filename.c_str());
+  for (size_t i=0; i<docids.size(); ++i)
+    fout << docids[i] << " " << (offset[i+1] - offset[i]) / ark.dim() << endl;
+  fout.close();
+}
+
+void saveAsLibSvmFormat(const string& filename, const KaldiArchive& ark, const map<string, vector<int> >& labels, bool skip) {
 
   size_t N = ark.docid().size();
   size_t dim = ark.dim();
@@ -38,7 +62,12 @@ int main (int argc, char* argv[]) {
   const vector<float>& data = ark.data();
   const vector<size_t>& offset = ark.offset();
 
-  FILE* fid = (output_fn.empty() || output_fn == "-") ? stdout : fopen(output_fn.c_str(), "w");
+  FILE* fid;
+
+  if (filename.empty() || filename == "-")
+    fid = stdout;
+  else
+    fid = fopen(filename.c_str(), "w");
 
   for (size_t i=0; i<N; ++i) {
     size_t length = (offset[i+1] - offset[i]) / dim;
@@ -47,9 +76,9 @@ int main (int argc, char* argv[]) {
       int y = 0;
 
       if (labels.count(docids[i]) > 0)
-	y = labels[docids[i]][j];
+	y = labels.at(docids[i])[j];
       else {
-	if (ignore)
+	if (skip)
 	  continue;
       }
 
@@ -66,16 +95,6 @@ int main (int argc, char* argv[]) {
 
   if (fid != stdout)
     fclose(fid);
-
-  if (!mapping_fn.empty()) {
-    ofstream fout(mapping_fn.c_str());
-
-    for (size_t i=0; i<docids.size(); ++i)
-      fout << docids[i] << " " << (offset[i+1] - offset[i]) / dim << endl;
-    fout.close();
-  }
-
-  return 0;
 }
 
 map<string, vector<int> > readLabels(const string& filename) {
