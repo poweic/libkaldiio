@@ -10,20 +10,22 @@ int main (int argc, char* argv[]) {
   CmdParser cmd(argc, argv);
   cmd.add("kaldi-ark-in")
      .add("label-in")
-     .add("svm-out", false);
+     .add("svm-out", false)
+     .add("mapping-out", false);
 
   cmd.addGroup("Options:")
      .add("-i", "ignore missing labels (set those to 0)", "false");
 
-  cmd.addGroup("Example: ./kaldi-to-svm --ark data/example.39.ark -svm example.dat");
+  cmd.addGroup("Example: ./kaldi-to-svm data/example.39.ark example.labels");
 
   if(!cmd.isOptionLegal())
     cmd.showUsageAndExit();
 
 
-  string input_fn = cmd[1];
-  string label_fn = cmd[2];
-  string output_fn= cmd[3];
+  string input_fn   = cmd[1];
+  string label_fn   = cmd[2];
+  string output_fn  = cmd[3];
+  string mapping_fn = cmd[4];
   bool ignore	  = cmd["-i"];
 
   map<string, vector<int> > labels = readLabels(label_fn);
@@ -64,6 +66,14 @@ int main (int argc, char* argv[]) {
 
   if (fid != stdout)
     fclose(fid);
+
+  if (!mapping_fn.empty()) {
+    ofstream fout(mapping_fn.c_str());
+
+    for (size_t i=0; i<docids.size(); ++i)
+      fout << docids[i] << " " << (offset[i+1] - offset[i]) / dim << endl;
+    fout.close();
+  }
 
   return 0;
 }
