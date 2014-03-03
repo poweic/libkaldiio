@@ -1,11 +1,11 @@
 CC=gcc
 CXX=g++
 CFLAGS=
-EXECUTABLES=kaldi-to-svm
+EXECUTABLES=kaldi-to-svm raw-to-kaldi count-frames
 INCLUDE=-I include/
 CPPFLAGS= -std=c++0x -Wall -fstrict-aliasing $(CFLAGS) $(INCLUDE)
  
-.PHONY: debug all o3 kaldi-to-svm
+.PHONY: debug all o3 $(EXECUTABLES)
 all: $(EXECUTABLES) ctags
 
 o3: CFLAGS+=-O3
@@ -21,6 +21,10 @@ SOURCES=kaldi-io.cpp
 OBJ=$(addprefix obj/,$(SOURCES:.cpp=.o))
 
 kaldi-to-svm: kaldi-to-svm.cpp $(OBJ)
+	$(CXX) $(CPPFLAGS) $(INCLUDE) -o $@ $^
+raw-to-kaldi: raw-to-kaldi.cpp $(OBJ)
+	$(CXX) $(CPPFLAGS) $(INCLUDE) -o $@ $^
+count-frames: count-frames.cpp $(OBJ)
 	$(CXX) $(CPPFLAGS) $(INCLUDE) -o $@ $^
 ctags:
 	@ctags -R *

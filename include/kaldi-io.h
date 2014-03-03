@@ -60,6 +60,8 @@ static inline string trim(string s) {
   return ltrim(rtrim(s));
 }
 
+string peek_a_line(istream& is);
+
 vector<string> split(const string &s, char delim);
 vector<string>& split(const string &s, char delim, vector<string>& elems);
 
