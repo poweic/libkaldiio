@@ -170,6 +170,27 @@ void KaldiArchive::write(ostream& os) {
   }
 }
 
+string peek_a_line(istream& is) {
+
+  string line;
+  
+  if (!is) return line;
+
+  char buffer;
+  is.read(&buffer, 1);
+
+  while (buffer != '\n') {
+    line.push_back(buffer);
+    is.read(&buffer, 1);
+  }
+
+  is.putback('\n');
+  for (int i=line.size() - 1; i>=0; --i)
+    is.putback(line[i]);
+
+  return line;
+}
+
 vector<string>& split(const string &s, char delim, vector<string>& elems) {
   stringstream ss(s);
   string item;
