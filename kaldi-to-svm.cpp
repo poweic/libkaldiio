@@ -1,53 +1,93 @@
 #include <cmdparser.h>
 #include <fstream>
+#include <cstdio>
 #include <kaldi-io.h>
 
 map<string, vector<int> > readLabels(const string& filename);
+void saveAsLibSvmFormat(const string& filename, const KaldiArchive& ark, const map<string, vector<int> >& labels, bool skip);
+void saveDocumentFrameCountMapping(const string& filename, const KaldiArchive& ark);
 
 int main (int argc, char* argv[]) {
 
   CmdParser cmd(argc, argv);
-  cmd.addGroup("Input / Output:")
-     .add("--ark", "filename of input feature archive (in Kaldi format)")
-     .add("--label", "filename of input label")
-     .add("--svm", "filename of output (in LibSVM format)", false);
+  cmd.add("kaldi-ark-in")
+     .add("label-in")
+     .add("svm-out", false)
+     .add("mapping-out", false);
 
   cmd.addGroup("Options:")
-     .add("-i", "ignore missing labels (set those to 0)", "true");
+     .add("--skip", "Skip over missing labels (--skip=true )\n"
+		    "Print 0 as label         (--skip=false)", "false");
 
-  cmd.addGroup("Example: ./kaldi-to-svm --ark data/example.39.ark -svm example.dat");
+  cmd.addGroup("Example: ./kaldi-to-svm data/example.39.ark example.labels");
 
   if(!cmd.isOptionLegal())
     cmd.showUsageAndExit();
 
-  string input_fn = cmd["--ark"];
-  string label_fn = cmd["--label"];
-  string output_fn= cmd["--svm"];
-  bool ignore	  = cmd["-i"];
+  string input_fn   = cmd[1];
+  string label_fn   = cmd[2];
+  string output_fn  = cmd[3];
+  string mapping_fn = cmd[4];
+  bool skip	    = cmd["--skip"];
 
   map<string, vector<int> > labels = readLabels(label_fn);
 
-  size_t N, dim; float* data; size_t* offset;
-  vector<string> docids = readKaldi(input_fn, data, offset, N, dim); 
+  KaldiArchive ark(input_fn);
 
-  FILE* fid = output_fn.empty() ? stdout : fopen(output_fn.c_str(), "w");
+  saveAsLibSvmFormat(output_fn, ark, labels, skip);
+  saveDocumentFrameCountMapping(mapping_fn, ark);
+
+  return 0;
+}
+
+void saveDocumentFrameCountMapping(const string& filename, const KaldiArchive& ark) {
+
+  const vector<string>& docids = ark.docid();
+  const vector<size_t>& offset = ark.offset();
+
+  if (filename.empty())
+    return;
+
+  ofstream fout(filename.c_str());
+  for (size_t i=0; i<docids.size(); ++i)
+    fout << docids[i] << " " << (offset[i+1] - offset[i]) / ark.dim() << endl;
+  fout.close();
+}
+
+void saveAsLibSvmFormat(const string& filename, const KaldiArchive& ark, const map<string, vector<int> >& labels, bool skip) {
+
+  size_t N = ark.docid().size();
+  size_t dim = ark.dim();
+  const vector<string>& docids = ark.docid();
+  const vector<float>& data = ark.data();
+  const vector<size_t>& offset = ark.offset();
+
+  FILE* fid;
+
+  if (filename.empty() || filename == "-")
+    fid = stdout;
+  else
+    fid = fopen(filename.c_str(), "w");
 
   for (size_t i=0; i<N; ++i) {
     size_t length = (offset[i+1] - offset[i]) / dim;
     for (size_t j=0; j<length; ++j) {
 
-      if (labels.count(docids[i]) == 0) {
-	if (ignore)
+      int y = 0;
+
+      if (labels.count(docids[i]) > 0)
+	y = labels.at(docids[i])[j];
+      else {
+	if (skip)
 	  continue;
-	else
-	  fprintf(fid, "0 ");
       }
-      
-      fprintf(fid, "%d ", labels[docids[i]][j]);
+
+      fprintf(fid, "%d ", y);
+
       for (size_t k=0; k<dim; ++k) {
 	float x = data[offset[i] + j*dim + k];
 	if (x != 0)
-	  fprintf(fid, "%lu:%g ", k, x);
+	  fprintf(fid, "%lu:%g ", k + 1, x);
       }
       fprintf(fid, "\n");
     }
@@ -55,13 +95,14 @@ int main (int argc, char* argv[]) {
 
   if (fid != stdout)
     fclose(fid);
-
-  return 0;
 }
 
 map<string, vector<int> > readLabels(const string& filename) {
 
   map<string, vector<int> > labels;
+
+  if (filename.empty())
+    return labels;
 
   ifstream fin(filename.c_str());
 
