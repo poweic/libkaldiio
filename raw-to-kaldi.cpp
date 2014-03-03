@@ -8,11 +8,11 @@ void reformat(istream& in, const vector<string>& docids, const vector<int>& fram
 int main (int argc, char* argv[]) {
 
   CmdParser cmd(argc, argv);
-  cmd.add("svm-in")
+  cmd.add("raw-data-in")
      .add("mapping-in")
      .add("kaldi-out", false);
 
-  cmd.addGroup("Example: ./svm-to-kaldi ...");
+  cmd.addGroup("Example: ./raw-to-kaldi data/example.39.dense mapout");
 
   if(!cmd.isOptionLegal())
     cmd.showUsageAndExit();
