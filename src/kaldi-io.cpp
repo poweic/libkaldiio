@@ -203,3 +203,22 @@ vector<string> split(const string &s, char delim) {
   vector<string> elems;
   return split(s, delim, elems);
 }
+
+void saveFrameCounts(const string& filename, const KaldiArchive& ark) {
+
+  if (filename.empty() || filename == "-")
+    saveFrameCounts(cout, ark);
+  else {
+    ofstream fout(filename.c_str());
+    saveFrameCounts(fout, ark);
+    fout.close();
+  }
+}
+
+void saveFrameCounts(ostream& os, const KaldiArchive& ark) {
+  const vector<string>& docids = ark.docid();
+  const vector<size_t>& offset = ark.offset();
+
+  for (size_t i=0; i<docids.size(); ++i)
+    os << docids[i] << " " << (offset[i+1] - offset[i]) / ark.dim() << endl;
+}

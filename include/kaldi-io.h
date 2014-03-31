@@ -65,4 +65,7 @@ string peek_a_line(istream& is);
 vector<string> split(const string &s, char delim);
 vector<string>& split(const string &s, char delim, vector<string>& elems);
 
+void saveFrameCounts(const string& filename, const KaldiArchive& ark);
+void saveFrameCounts(ostream& os, const KaldiArchive& ark);
+
 #endif
