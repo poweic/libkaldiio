@@ -5,7 +5,6 @@
 
 map<string, vector<int> > readLabels(const string& filename);
 void saveAsLibSvmFormat(const string& filename, const KaldiArchive& ark, const map<string, vector<int> >& labels, bool skip);
-void saveDocumentFrameCountMapping(const string& filename, const KaldiArchive& ark);
 
 int main (int argc, char* argv[]) {
 
@@ -35,23 +34,9 @@ int main (int argc, char* argv[]) {
   KaldiArchive ark(input_fn);
 
   saveAsLibSvmFormat(output_fn, ark, labels, skip);
-  saveDocumentFrameCountMapping(mapping_fn, ark);
+  saveFrameCounts(mapping_fn, ark);
 
   return 0;
-}
-
-void saveDocumentFrameCountMapping(const string& filename, const KaldiArchive& ark) {
-
-  const vector<string>& docids = ark.docid();
-  const vector<size_t>& offset = ark.offset();
-
-  if (filename.empty())
-    return;
-
-  ofstream fout(filename.c_str());
-  for (size_t i=0; i<docids.size(); ++i)
-    fout << docids[i] << " " << (offset[i+1] - offset[i]) / ark.dim() << endl;
-  fout.close();
 }
 
 void saveAsLibSvmFormat(const string& filename, const KaldiArchive& ark, const map<string, vector<int> >& labels, bool skip) {

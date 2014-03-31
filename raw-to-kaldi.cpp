@@ -12,7 +12,7 @@ int main (int argc, char* argv[]) {
      .add("mapping-in")
      .add("kaldi-out", false);
 
-  cmd.addGroup("Example: ./raw-to-kaldi data/example.39.dense mapout");
+  cmd.addGroup("Example: ./raw-to-kaldi data/example.39.dense mapin");
 
   if(!cmd.isOptionLegal())
     cmd.showUsageAndExit();
