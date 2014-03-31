@@ -206,7 +206,7 @@ vector<string> split(const string &s, char delim) {
 
 void saveFrameCounts(const string& filename, const KaldiArchive& ark) {
 
-  if (filename.empty() || filename == "-")
+  if (filename == "-")
     saveFrameCounts(cout, ark);
   else {
     ofstream fout(filename.c_str());
